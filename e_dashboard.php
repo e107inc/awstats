@@ -6,7 +6,10 @@ class awstats_dashboard // include plugin-folder in the name.
 {
 	
 	private $title; // dynamic title.
+
+	/** @var awstats */
 	private $awObj;
+
 	private $options;
 	private $year;
 	private $month;
@@ -96,6 +99,11 @@ class awstats_dashboard // include plugin-folder in the name.
 
 		$stats = $this->awObj->load($this->year)->getData('SESSION', $this->month);
 
+		if(empty($stats))
+		{
+			return "No data";
+		}
+
 		if($error = $this->awObj->getLastError())
 		{
 		//	return $error;
@@ -164,6 +172,11 @@ class awstats_dashboard // include plugin-folder in the name.
 		$this->initChart();
 
 		$stats = $this->awObj->load($this->year)->getData('DOMAIN',$this->month);
+
+		if(empty($stats))
+		{
+			return "No Data";
+		}
 
 		if($error = $this->awObj->getLastError())
 		{
@@ -259,6 +272,14 @@ class awstats_dashboard // include plugin-folder in the name.
 		foreach($stats as $date=>$info)
 		{
 			list($y,$m,$d) = explode("-",$date);
+
+			$info = trim($info);
+
+			if(empty($info))
+			{
+				continue;
+			}
+
 			list($visits,$pages,$hits,$bw) = explode(" ",$info);
 
 			$d = intval($d);
@@ -327,8 +348,10 @@ class awstats_dashboard // include plugin-folder in the name.
 
 		for ($m = 1; $m <= 12; $m++)
 		{
-			$unique     = (int) $stats[$m]['TotalUnique'];
-			$visits     = (int) $stats[$m]['TotalVisits'];
+
+
+			$unique     = isset($stats[$m]['TotalUnique']) ? (int) $stats[$m]['TotalUnique'] : 0;
+			$visits     = isset($stats[$m]['TotalVisits']) ? (int) $stats[$m]['TotalVisits'] : 0;
 		//	$hits       = (int) $stats[$m]['TotalHits'];
 
 			$data[$m][0] = $monthName[$m];
@@ -440,9 +463,15 @@ class awstats_dashboard // include plugin-folder in the name.
 
 		$stats = $this->awObj->load($this->year)->getData('BROWSER',$this->month);
 
+		if(empty($stats))
+		{
+			return "No Data";
+		}
+
 		$text = "<table class='table table-striped table-bordered'>";
 		$text .= "<tr><th>Browser</th>
 		<th class='text-right'>Amount</th></tr>";
+
 
 		foreach($stats as $name=>$val)
 		{
@@ -508,4 +537,3 @@ class awstats_dashboard // include plugin-folder in the name.
 	
 	
 }
-?>

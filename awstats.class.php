@@ -149,18 +149,20 @@
 		/**
 		 * @return array
 		 */
-		public function getMonths()
+		public function getMonths($section = 'GENERAL')
 		{
 			$arr = array();
 
 			for($a = 1; $a <= 12; $a++)
 			{
-				$arr[$a] = !empty($this->data[$this->year][$a]['GENERAL']) ? $this->data[$this->year][$a]['GENERAL'] : array();
+				$arr[$a] = !empty($this->data[$this->year][$a][$section]) ? $this->data[$this->year][$a][$section] : array();
 			}
 
 			return $arr;
 
 		}
+
+
 
 
 		public function getLastError()
@@ -384,6 +386,7 @@
 						break;
 
 					case 'SESSION':
+					case 'SEREFERRALS':
 
 						$var = array();
 						foreach($section['content'] as $row)

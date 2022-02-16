@@ -31,15 +31,21 @@ class awstats_dashboard // include plugin-folder in the name.
 			1   => array('text'		=> $this->months(),   'caption'	=> "Yearly"),
 			2   => array('text'		=> $this->browser(),    'caption'	=> "Browser"),
 			3   => array('text'		=> $this->sessions(),   'caption'	=> "Sessions"),
-		//	3   => array()
+			4   => array('text'     => $this->pagerefs(), 'caption'=>"Referrers"),
+			5   => array('text'     => $this->sider(), 'caption'=>"Pages"),
+			6   => array('text'     => $this->browser(), 'caption'=>"Browsers"),
+			7   => array('text'     => $this->searchMonths('google'), 'caption'=>'Google Search'),
+			8   => array('text'     => $this->searchMonths('yahoo'), 'caption'=>'Yahoo Search'),
+			9   => array('text'     => $this->searchMonths('bing'), 'caption'=>'Bing Search'),
+
 		);
 
 
-
+/*
 		$config[] = array(
 				'text'	=> $this->map(),	    'caption'	=> "Visitors by Country"
 
-		);
+		);*/
 
 		$config[] = array(
 
@@ -323,6 +329,7 @@ class awstats_dashboard // include plugin-folder in the name.
 		//	return $error;
 		}
 
+		$statsLY = $this->awObj->load($this->year -1)->getMonths();
 		$stats = $this->awObj->load($this->year)->getMonths();
 
 		$cht = e107::getChart();
@@ -335,11 +342,12 @@ class awstats_dashboard // include plugin-folder in the name.
 		$width          = '100%';
 		$height         = 450;
 
-		$label          = "Vistors ".$this->year;
+		$label          = "Vistors (". ($this->year -1) ." - ".$this->year.')';
 
 		$monthName =  e107::getDate()->terms('month-short');
 
-
+		$lastYearDiz = substr($this->year -1,2,2);
+		$thisYearDiz = substr($this->year,2,2);
 
 		$data = array();
 		$data[0]  = array('Month', 'Unique', 'Visits');
@@ -348,15 +356,25 @@ class awstats_dashboard // include plugin-folder in the name.
 
 		for ($m = 1; $m <= 12; $m++)
 		{
+			$unique     = isset($statsLY[$m]['TotalUnique']) ? (int) $statsLY[$m]['TotalUnique'] : 0;
+			$visits     = isset($statsLY[$m]['TotalVisits']) ? (int) $statsLY[$m]['TotalVisits'] : 0;
 
+			$data[$m][0] = $monthName[$m]." '".$lastYearDiz;
+			$data[$m][1] = $unique;
+			$data[$m][2] = $visits;
+		//	$data[$m][3] = $hits;
+		}
 
+		for ($m = 1; $m <= 12; $m++)
+		{
 			$unique     = isset($stats[$m]['TotalUnique']) ? (int) $stats[$m]['TotalUnique'] : 0;
 			$visits     = isset($stats[$m]['TotalVisits']) ? (int) $stats[$m]['TotalVisits'] : 0;
 		//	$hits       = (int) $stats[$m]['TotalHits'];
 
-			$data[$m][0] = $monthName[$m];
-			$data[$m][1] = $unique;
-			$data[$m][2] = $visits;
+			$key = $m + 12;
+			$data[$key][0] = $monthName[$m]." '".$thisYearDiz;
+			$data[$key][1] = $unique;
+			$data[$key][2] = $visits;
 		//	$data[$m][3] = $hits;
 		}
 
@@ -367,6 +385,134 @@ class awstats_dashboard // include plugin-folder in the name.
 		$options = $this->options;
 		$options['colors'] = array('#ff9933', '#f3f300','#66f0ff', '#DC493C', '#3B5999');
 		$options['hAxis']['title'] = $label;
+		$options['hAxis']['slantedText'] = true;
+		$options['hAxis']['slantedTextAngle'] = 60;
+		//	unset($options['colors']);
+
+		$cht->setType('column');
+		$cht->setOptions($options);
+		$cht->setData($data);
+	//	$cht->debug(true);
+
+		$text = $cht->render($id, $width, $height);
+		// $text .= $cht->renderTable();
+
+
+		return "<div>".$text."</div>";
+
+
+	}
+
+	private function getSearchStats($year)
+	{
+		$stats = $this->awObj->load($year)->getMonths('SEREFERRALS');
+		$ret = [];
+
+		foreach($stats as $month=>$arr)
+		{
+			foreach($arr as $k=>$v)
+			{
+				if(strpos($k,'google')!==false)
+				{
+					$ret[$month]['google'] += (int) $v;
+				}
+				elseif(strpos($k,'yahoo')!==false)
+				{
+					$ret[$month]['yahoo'] += (int) $v;
+				}
+				elseif(strpos($k,'bing')!==false)
+				{
+					$ret[$month]['bing'] += (int) $v;
+				}
+				else
+				{
+					$ret[$month]['other'] += (int) $v;
+				}
+			}
+
+		}
+
+		return $ret;
+
+	}
+
+
+	function searchMonths($type = 'google')
+	{
+		$this->initChart();
+
+		if($error = $this->awObj->getLastError())
+		{
+		//	return $error;
+		}
+
+
+		$statsLY = $this->getSearchStats($this->year -1) ;
+		$stats = $this->getSearchStats($this->year) ;
+
+		// e107::getDebug()->log($statsLY);
+// e107::getDebug()->log($stats);
+
+		$cht = e107::getChart();
+		$cht->setProvider('google');
+
+
+		$id             = __CLASS__."_".__FUNCTION__.'_'.$type;
+
+		$amt            = array();
+		$width          = '100%';
+		$height         = 450;
+
+		$label          = "Search Engine Referrer (".(string) ($this->year -1) .' - '.$this->year.")";
+
+		$monthName =  e107::getDate()->terms('month-short');
+
+		$data = array();
+		$data[0]  = array('Month');
+		$data[0][] = ucfirst($type); // 'Google';
+		$data[0][] = array('type'=>'string', 'label'=>'Total', 'role'=>'annotation', 'p'=> array('html'=>true));
+	//	$data[0][] = 'Yahoo';
+	//	$data[0][] = 'Bing';
+	//	$data[0][] = 'Other';
+
+		$lastYearDiz = substr($this->year -1,2,2);
+		$thisYearDiz = substr($this->year,2,2);
+
+		for ($m = 1; $m <= 12; $m++)
+		{
+
+			$data[$m][0] = $monthName[$m]." '".$lastYearDiz;
+			$data[$m][1] = isset($statsLY[$m][$type]) ? (int) $statsLY[$m][$type] : 0;
+			$data[$m][2] = isset($statsLY[$m][$type]) ? (string) $statsLY[$m][$type] : '';
+		//	$data[$m][2] = isset($statsLY[$m]['yahoo']) ? (int) $statsLY[$m]['yahoo'] : 0;
+		//	$data[$m][3] = isset($statsLY[$m]['bing']) ? (int) $statsLY[$m]['bing'] : 0;
+		//	$data[$m][4] = isset($statsLY[$m]['other']) ? (int) $statsLY[$m]['other'] : 0;
+		}
+
+		for ($m = 1; $m <= 12; $m++)
+		{
+			$key = $m + 12; 
+			$data[$key][0] = $monthName[$m]." '".$thisYearDiz;;
+			$data[$key][1] = isset($stats[$m][$type]) ? (int) $stats[$m][$type] : 0;
+			$data[$key][2] = isset($stats[$m][$type]) ? (string) $stats[$m][$type] : '';
+		//	$data[$key][2] = isset($stats[$m]['yahoo']) ? (int) $stats[$m]['yahoo'] : 0;
+		//	$data[$key][3] = isset($stats[$m]['bing']) ? (int) $stats[$m]['bing'] : 0;
+		//	$data[$key][4] = isset($stats[$m]['other']) ? (int) $stats[$m]['other'] : 0;
+
+		}
+
+		$sum = array_sum($amt);
+
+		$this->title = 'Search Engine Referrals ('.$sum.')';
+
+		$options = $this->options;
+		$options['colors'] = array('#ff9933', '#f3f300','#66f0ff', '#DC493C', '#3B5999');
+		$options['hAxis']['title'] = $label;
+		$options['hAxis']['slantedText'] = true;
+		$options['hAxis']['slantedTextAngle'] = 60;
+
+		$options['annotations'] = array('textStyle'=> array('color'=>'black', 'fontSize' => 9), 'format'=>'number', 'alwaysOutside' => true, 'stem' => array('color' => 'transparent'));
+
 
 		//	unset($options['colors']);
 

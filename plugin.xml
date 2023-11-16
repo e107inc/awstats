@@ -2,7 +2,7 @@
 <e107Plugin name="AwStats" lan="" version="2.0" date="2023-11-16" compatibility="2.0" installRequired="true" >
 	<author name="CaMer0n" url="https://e107.org" />
 	<summary lan="">View AwStats statistics from within e107</summary>
-	<description lan="">AWStats is a free and open-source log file analyzer that generates advanced statistics for web, streaming, FTP, or mail servers. This plugin renders AwStats statistics within e107's admin area. /description>
+	<description lan="">AWStats is a free and open-source log file analyzer that generates advanced statistics for web, streaming, FTP, or mail servers. This plugin renders AwStats statistics within e107's admin area. </description>
 	<keywords>
 		<word>stats</word>
 		<word>awstats</word>

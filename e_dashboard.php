@@ -1,7 +1,7 @@
 <?php
 if (!defined('e107_INIT')) { exit; }
 
-
+require_once(e_PLUGIN."awstats/awstats.class.php");
 class awstats_dashboard // include plugin-folder in the name.
 {
 	
@@ -26,7 +26,7 @@ class awstats_dashboard // include plugin-folder in the name.
 		$config = array();
 
 
-		$config[] = array(
+		$config[0] = array(
 			0   =>  array('text'	=> $this->days(),	    'caption'	=> "Daily"),
 			1   => array('text'		=> $this->months(),   'caption'	=> "Yearly"),
 			2   => array('text'		=> $this->browser(),    'caption'	=> "Browser"),
@@ -37,8 +37,20 @@ class awstats_dashboard // include plugin-folder in the name.
 			7   => array('text'     => $this->searchMonths('google'), 'caption'=>'Google Search'),
 			8   => array('text'     => $this->searchMonths('yahoo'), 'caption'=>'Yahoo Search'),
 			9   => array('text'     => $this->searchMonths('bing'), 'caption'=>'Bing Search'),
+			10   => array('text'     => $this->searchMonths('_all_'), 'caption'=>'All Search'),
 
 		);
+
+		if($referrerCharts = awstats::getReferrerKeywords())
+		{
+			foreach($referrerCharts as $search)
+			{
+				$config[0][] = array('text' => $this->searchMonths($search), 'caption'=>ucfirst($search));
+			}
+
+		}
+
+
 
 
 /*
@@ -403,39 +415,6 @@ class awstats_dashboard // include plugin-folder in the name.
 
 	}
 
-	private function getSearchStats($year)
-	{
-		$stats = $this->awObj->load($year)->getMonths('SEREFERRALS');
-		$ret = [];
-
-		foreach($stats as $month=>$arr)
-		{
-			foreach($arr as $k=>$v)
-			{
-				if(strpos($k,'google')!==false)
-				{
-					$ret[$month]['google'] += (int) $v;
-				}
-				elseif(strpos($k,'yahoo')!==false)
-				{
-					$ret[$month]['yahoo'] += (int) $v;
-				}
-				elseif(strpos($k,'bing')!==false)
-				{
-					$ret[$month]['bing'] += (int) $v;
-				}
-				else
-				{
-					$ret[$month]['other'] += (int) $v;
-				}
-			}
-
-		}
-
-		return $ret;
-
-	}
-
 
 	function searchMonths($type = 'google')
 	{
@@ -447,8 +426,8 @@ class awstats_dashboard // include plugin-folder in the name.
 		}
 
 
-		$statsLY = $this->getSearchStats($this->year -1) ;
-		$stats = $this->getSearchStats($this->year) ;
+		$statsLY = $this->awObj->getSearchStats($this->year - 1) ;
+		$stats = $this->awObj->getSearchStats($this->year) ;
 
 		// e107::getDebug()->log($statsLY);
 // e107::getDebug()->log($stats);
@@ -469,11 +448,22 @@ class awstats_dashboard // include plugin-folder in the name.
 
 		$data = array();
 		$data[0]  = array('Month');
-		$data[0][] = ucfirst($type); // 'Google';
+
+		if($type === '_all_')
+		{
+			$data[0][] = 'Google';
+			$data[0][] = 'Yahoo';
+			$data[0][] = 'Bing';
+			$data[0][] = 'Other';
+		}
+		else
+		{
+			$data[0][] = ucfirst($type);
+		}
+
+
 		$data[0][] = array('type'=>'string', 'label'=>'Total', 'role'=>'annotation', 'p'=> array('html'=>true));
-	//	$data[0][] = 'Yahoo';
-	//	$data[0][] = 'Bing';
-	//	$data[0][] = 'Other';
+
 
 		$lastYearDiz = substr($this->year -1,2,2);
 		$thisYearDiz = substr($this->year,2,2);
@@ -482,22 +472,41 @@ class awstats_dashboard // include plugin-folder in the name.
 		{
 
 			$data[$m][0] = $monthName[$m]." '".$lastYearDiz;
-			$data[$m][1] = isset($statsLY[$m][$type]) ? (int) $statsLY[$m][$type] : 0;
-			$data[$m][2] = isset($statsLY[$m][$type]) ? (string) $statsLY[$m][$type] : '';
-		//	$data[$m][2] = isset($statsLY[$m]['yahoo']) ? (int) $statsLY[$m]['yahoo'] : 0;
-		//	$data[$m][3] = isset($statsLY[$m]['bing']) ? (int) $statsLY[$m]['bing'] : 0;
-		//	$data[$m][4] = isset($statsLY[$m]['other']) ? (int) $statsLY[$m]['other'] : 0;
+			if($type === '_all_')
+			{
+				$data[$m][1] = isset($statsLY[$m]['google']) ? (int) $statsLY[$m]['google'] : 0;
+				$data[$m][2] = isset($statsLY[$m]['yahoo']) ? (int) $statsLY[$m]['yahoo'] : 0;
+				$data[$m][3] = isset($statsLY[$m]['bing']) ? (int) $statsLY[$m]['bing'] : 0;
+				$data[$m][4] = isset($statsLY[$m]['other']) ? (int) $statsLY[$m]['other'] : 0;
+			}
+			else
+			{
+				$data[$m][1] = isset($statsLY[$m][$type]) ? (int) $statsLY[$m][$type] : 0;
+			}
+
+
+			$data[$m][] = isset($statsLY[$m][$type]) ? (string) $statsLY[$m][$type] : '';
+		//
 		}
 
 		for ($m = 1; $m <= 12; $m++)
 		{
 			$key = $m + 12; 
 			$data[$key][0] = $monthName[$m]." '".$thisYearDiz;;
-			$data[$key][1] = isset($stats[$m][$type]) ? (int) $stats[$m][$type] : 0;
-			$data[$key][2] = isset($stats[$m][$type]) ? (string) $stats[$m][$type] : '';
-		//	$data[$key][2] = isset($stats[$m]['yahoo']) ? (int) $stats[$m]['yahoo'] : 0;
-		//	$data[$key][3] = isset($stats[$m]['bing']) ? (int) $stats[$m]['bing'] : 0;
-		//	$data[$key][4] = isset($stats[$m]['other']) ? (int) $stats[$m]['other'] : 0;
+			if($type === '_all_')
+			{
+				$data[$key][1] = isset($stats[$m]['google']) ? (int) $stats[$m]['google'] : 0;
+				$data[$key][2] = isset($stats[$m]['yahoo']) ? (int) $stats[$m]['yahoo'] : 0;
+				$data[$key][3] = isset($stats[$m]['bing']) ? (int) $stats[$m]['bing'] : 0;
+				$data[$key][4] = isset($stats[$m]['other']) ? (int) $stats[$m]['other'] : 0;
+			}
+			else
+			{
+				$data[$key][1] = isset($stats[$m][$type]) ? (int) $stats[$m][$type] : 0;
+			}
+
+			$data[$key][] = isset($stats[$m][$type]) ? (string) $stats[$m][$type] : '';
+
 
 		}
 

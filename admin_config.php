@@ -122,6 +122,7 @@ class awstats_ui extends e_admin_ui
 			'domain'		=> array('title'=> 'Domain', 'tab'=>0, 'type'=>'text', 'data' => 'str', 'help'=>''),
 			'ssl'		=> array('title'=> 'SSL', 'tab'=>0, 'type'=>'boolean', 'data' => 'str', 'help'=>''),
 			'3D'		=> array('title'=> '3D', 'tab'=>0, 'type'=>'boolean', 'data' => 'str', 'help'=>''),
+			'chart_referrers'		=> array('title'=> 'Referrer Charts', 'tab'=>0, 'type'=>'textarea', 'data' => 'str', 'help'=>'Enter url search terms, one per line, and a monthly chart will be generated for it.', 'writeParms'=>['placeholder'=>"eg. facebook.com\ninstagram.com\notherwebsite.com"]),
 
 		); 
 
@@ -235,7 +236,18 @@ class awstats_ui extends e_admin_ui
 
 			$text = $this->render("Monthly Visitors", $dash->months());
 			$text .= $this->render("Daily Visitors", $dash->days());
-			$text .= $this->render("Visitors by Country", $dash->map());
+
+
+			if($referrerCharts = awstats::getReferrerKeywords())
+			{
+				foreach($referrerCharts as $search)
+				{
+					$text .= $this->render(ucfirst($search),$dash->searchMonths($search));
+				}
+
+			}
+
+		//	$text .= $this->render("Visitors by Country", $dash->map());
 			$text .= $this->render("Session Average",$dash->sessions());
 			$text .= $dash->pagerefs();
 			$text .= $dash->sider();

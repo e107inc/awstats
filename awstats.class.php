@@ -29,10 +29,20 @@
 			$this->path = $this->findPath();
 		}
 
+		public function setPath($path)
+		{
+			$this->path = $path;
+		}
+
+		public function getPath()
+		{
+			return $this->path;
+		}
+
 		private function findPath()
 		{
 			$i = 0;
-			$path = './';
+			$path = __DIR__.'/';
 
 			while (!is_dir("{$path}tmp/awstats"))
 			{
@@ -109,7 +119,7 @@
 
 		public function getYears()
 		{
-			$res = scandir($this->path);
+			$res = !empty($this->path) ? scandir($this->path) : [];
 
 			$arr = array();
 			foreach($res as $val)
@@ -171,7 +181,7 @@
 		}
 
 
-		private function processFile($month, $year)
+		public function processFile($month, $year)
 		{
 			$this->year = $year;
 			$this->month = $month;
@@ -530,6 +540,95 @@
 			return $this->data[$this->year][$month][$section];
 		}
 
+		public function getSearchStats($year)
+		{
+
+			$stats = $this->load($year)->getMonths('SEREFERRALS');
+			$ret = [];
+
+			foreach($stats as $month => $arr)
+			{
+				foreach($arr as $k => $v)
+				{
+					if(strpos($k, 'google') !== false)
+					{
+						$ret[$month]['google'] += (int) $v;
+					}
+					elseif(strpos($k, 'yahoo') !== false)
+					{
+						$ret[$month]['yahoo'] += (int) $v;
+					}
+					elseif(strpos($k, 'bing') !== false)
+					{
+						$ret[$month]['bing'] += (int) $v;
+					}
+					/*	elseif(strpos($k,'facebook')!==false)
+						{
+							$ret[$month]['facebook'] += (int) $v;
+						}
+						elseif(strpos($k,'instagram')!==false)
+						{
+							$ret[$month]['instagram'] += (int) $v;
+						}*/
+					else
+					{
+						$ret[$month]['other'] += (int) $v;
+					}
+				}
+
+			}
+
+			$stats = $this->load($year)->getMonths('PAGEREFS');
+
+			$search = awstats::getReferrerKeywords();
+
+			foreach($stats as $month => $arr)
+			{
+				foreach($arr as $line)
+				{
+					list($url,$page,$hit) = explode(' ',$line,3);
+					foreach($search as $domain)
+					{
+						if(strpos($url, $domain) !== false)
+						{
+							$ret[$month][$domain] += (int) $hit;
+						}
+					}
+
+
+				}
+
+			}
+
+
+			return $ret;
+
+		}
+
+
+		public static function getReferrerKeywords()
+		{
+			$ret = [];
+
+			if($pref = e107::pref('awstats', 'chart_referrers', false))
+			{
+				if($rows = explode("\n", $pref))
+				{
+					foreach($rows as $line)
+					{
+
+						$ret[] = trim($line);
+
+					}
+
+				}
+
+
+			}
+
+			return $ret;
+
+		}
 
 
 	}
